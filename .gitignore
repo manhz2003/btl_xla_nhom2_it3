@@ -1,0 +1,5 @@
+# Ẩn tệp yolov3.weights
+yolov3.weights
+
+# Ẩn các thư viện học máy nặng
+*.whl
