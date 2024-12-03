@@ -1,3 +1,8 @@
+# cv2: Thư viện OpenCV để xử lý hình ảnh và nhận diện đối tượng.
+# numpy: Dùng để xử lý mảng số liệu.
+# tkinter: Dùng để xây dựng giao diện người dùng.
+# PIL (Pillow): Hỗ trợ xử lý ảnh, chuyển đổi giữa định dạng OpenCV và Tkinter.
+# os: Dùng để làm việc với hệ thống tệp.
 import cv2
 import numpy as np
 import tkinter as tk
@@ -6,12 +11,21 @@ from PIL import Image, ImageTk
 import os
 
 # Load Yolo
+# cv2.dnn.readNet: Tải mô hình YOLO với các file cấu hình và trọng số.
 net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
+
+# classes: Danh sách các lớp đối tượng được mô hình nhận diện (ví dụ: người, xe, động vật, v.v.).
+# coco.names: File chứa danh sách tên các lớp.
 classes = []
 with open("coco.names", "r") as f:
     classes = f.read().splitlines()
 
-# Variables for storing file path, images, and detection count
+
+# file_path: Đường dẫn tệp ảnh được chọn.
+# img: Ảnh gốc đã đọc từ đường dẫn.
+# detected_img: Ảnh sau khi đã qua nhận diện.
+# photo và detected_photo: Ảnh được chuyển sang định dạng hiển thị trên Tkinter.
+# object_count: Số lượng đối tượng nhận diện được.
 file_path = None
 img = None
 detected_img = None
@@ -19,7 +33,10 @@ photo = None
 detected_photo = None
 object_count = 0
 
-# Function to select an image
+# Hàm chọn ảnh
+# filedialog.askopenfilename: Mở hộp thoại để người dùng chọn ảnh.
+# Kiểm tra xem tệp được chọn có đúng định dạng không (JPG, JPEG, PNG).
+# Nếu hợp lệ, ảnh được tải bằng cv2.imread và chuyển đổi sang định dạng RGB để hiển thị trên giao diện bằng ImageTk.PhotoImage.
 def select_image():
     global file_path, img, photo
     file_path = filedialog.askopenfilename(filetypes=[
@@ -28,16 +45,16 @@ def select_image():
         ("PNG files", "*.png"),
     ])
     if not file_path:
-        return  # No file selected
+        return  # Không có tập tin nào được chọn
 
     if not file_path.lower().endswith(('.jpg', '.jpeg', '.png')):
         messagebox.showerror("Lỗi định dạng", "Chỉ chấp nhận các file ảnh định dạng JPG, JPEG, hoặc PNG.")
-        file_path = None  # Reset file_path if invalid
+        file_path = None  # Đặt lại file_path nếu không hợp lệ
         return
 
-    # Load and process the image here
+    # Tải và xử lý hình ảnh ở đây
     print("File hợp lệ:", file_path)
-    # Load and display the selected image
+    # Tải và hiển thị hình ảnh đã chọn
     img = cv2.imread(file_path)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img_pil = Image.fromarray(img_rgb)
@@ -47,7 +64,19 @@ def select_image():
     original_image_label.config(image=photo)
     original_image_label.image = photo
 
-# Function to perform object detection and display results
+# Hàm nhận diện đối tượng:
+# Kiểm tra ảnh hợp lệ: Nếu chưa chọn ảnh, hiển thị thông báo lỗi.
+# Nhận diện đối tượng:
+# Chuyển ảnh thành blob sử dụng cv2.dnn.blobFromImage.
+# Đưa blob vào mô hình YOLO bằng net.setInput.
+# Lấy output từ các lớp cuối bằng net.forward.
+# Xử lý kết quả:
+# Lọc ra các box có độ chính xác > 0.2.
+# Sử dụng cv2.dnn.NMSBoxes để loại bỏ các box dư thừa (Non-Max Suppression).
+# Vẽ box và nhãn trên ảnh dùng cv2.rectangle và cv2.putText.
+# Hiển thị ảnh và danh sách đối tượng:
+# Chuyển đổi ảnh sang định dạng Tkinter để hiển thị.
+# Cập nhật danh sách đối tượng và số lượng lên giao diện.
 def show_result():
     global file_path, img, detected_img, detected_photo, object_count
     if not file_path:
@@ -97,7 +126,7 @@ def show_result():
 
     object_count = len(indexes.flatten())
 
-    # Update the detected image
+    # Cập nhật hình ảnh đã phát hiện
     detected_img_rgb = cv2.cvtColor(detected_img, cv2.COLOR_BGR2RGB)
     detected_img_pil = Image.fromarray(detected_img_rgb)
     detected_img_pil = detected_img_pil.resize((300, 300), Image.LANCZOS)
@@ -106,62 +135,64 @@ def show_result():
     detected_image_label.config(image=detected_photo)
     detected_image_label.image = detected_photo
 
-    # Update detected objects list and object count
+    # Cập nhật danh sách đối tượng được phát hiện và số lượng đối tượng
     object_list_frame.delete("1.0", tk.END)
     for obj_info in detected_objects:
         object_list_frame.insert(tk.END, f"{obj_info}\n")
     object_count_label.config(text=f"Tổng số đối tượng: {object_count}")
-# Adjust the layout for Tkinter GUI setup
+    
+# Điều chỉnh bố cục cho thiết lập GUI Tkinter
 root = tk.Tk()
 root.title("Hệ thống xác nhận và đếm đối tượng trong ảnh")
 root.geometry("900x650")
 
-# Load background image
-bg_image = Image.open("bg_icon/Ul.png")  # Path to your background image
+# Tải hình nền
+bg_image = Image.open("bg_icon/Ul.png")
 bg_image = bg_image.resize((900, 650), Image.LANCZOS)
 bg_photo = ImageTk.PhotoImage(bg_image)
 
-# Set background label
+# Đặt nhãn nền
 background_label = tk.Label(root, image=bg_photo)
 background_label.place(relwidth=1, relheight=1)
 
-# Title label
+#nhãn tiêu đề
 title_label = tk.Label(root, text="Hệ thống xác nhận và đếm đối tượng trong ảnh", font=("Arial", 18, "bold"), bg="#111F69", fg="white")
 title_label.grid(row=0, column=0, columnspan=3, pady=10)
 
-# Left Frame for original image
+# Khung bên trái cho hình ảnh gốc
 left_frame = tk.Frame(root, width=300, height=400, bg="white")
 left_frame.grid(row=1, column=0, padx=10, pady=10)
 left_frame.grid_propagate(False)
 original_image_label = tk.Label(left_frame)
 original_image_label.place(relx=0.5, rely=0.5, anchor="center")
 
-# Center Frame for detected image
+# Khung trung tâm cho hình ảnh được phát hiện
 center_frame = tk.Frame(root, width=300, height=400, bg="white")
 center_frame.grid(row=1, column=1, padx=10, pady=10)
 center_frame.grid_propagate(False)
 detected_image_label = tk.Label(center_frame)
 detected_image_label.place(relx=0.5, rely=0.5, anchor="center")
 
-# Right Frame for detected object list and count
+# Khung bên phải cho danh sách và số lượng đối tượng được phát hiện
 right_frame = tk.Frame(root, width=300, height=400, bg="white")
 right_frame.grid(row=1, column=2, padx=10, pady=10, sticky="n")
 right_frame.grid_propagate(False)
 
-# Object count label
+# Nhãn đếm đối tượng
 object_count_label = tk.Label(right_frame, text="Tổng số đối tượng: 0", font=("Arial", 12, "bold"), fg="red", bg="white")
 object_count_label.pack(pady=10)
 
-# Small detected objects list frame
+# Khung danh sách các đối tượng nhỏ được phát hiện
 object_list_frame = tk.Text(right_frame, wrap="word", font=("Arial", 10), bg="white", fg="black", height=10, width=30)
 object_list_frame.pack(pady=5)
 
 # Load icons
-select_icon = Image.open("bg_icon/download.png")  # Path to your "Chọn ảnh" icon
+select_icon = Image.open("bg_icon/download.png")
 select_icon = select_icon.resize((30, 30), Image.LANCZOS)
 select_icon_photo = ImageTk.PhotoImage(select_icon)
 
-confirm_icon = Image.open("bg_icon/verified.png")  # Path to your "Xác nhận và Đếm" icon
+# Đường dẫn tới icon "Xác nhận và Đếm" của bạn
+confirm_icon = Image.open("bg_icon/verified.png")
 confirm_icon = confirm_icon.resize((30, 30), Image.LANCZOS)
 confirm_icon_photo = ImageTk.PhotoImage(confirm_icon)
 
