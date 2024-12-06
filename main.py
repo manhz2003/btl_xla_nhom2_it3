@@ -84,6 +84,7 @@ def show_result():
         return
 
     # Object detection logic
+    # Sử lý ảnh trước khu đưa vào mô hình
     height, width, _ = img.shape
     blob = cv2.dnn.blobFromImage(img, 1 / 255, (320, 320), (0, 0, 0), swapRB=True, crop=False)
     net.setInput(blob)
@@ -92,7 +93,8 @@ def show_result():
 
     boxes, confidences, class_ids = [], [], []
     detected_objects = []
-
+    
+    #Duyệt qua các đầu ra từ mô hình chọn ra lớp có độ tin cậy cao nhất
     for output in layerOutputs:
         for detection in output:
             scores = detection[5:]
@@ -109,12 +111,17 @@ def show_result():
                 confidences.append(float(confidence))
                 class_ids.append(class_id)
 
+    # Loại bỏ các hộp bao quanh trùng lặp
     indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.2, 0.4)
 
+    
     if isinstance(indexes, tuple):
         indexes = indexes[0]
-
+        
+    #Tạo một bản sao của ảnh gốc để vẽ các bounding boxes lên.
     detected_img = img.copy()
+    
+    #Duyệt qua tất cả các hộp giới hạn được chọn và vẽ chúng lên ảnh. Cũng hiển thị nhãn và độ tin cậy cho mỗi đối tượng phát hiện
     for i in indexes.flatten():
         x, y, w, h = boxes[i]
         label = str(classes[class_ids[i]])
@@ -124,6 +131,7 @@ def show_result():
         cv2.rectangle(detected_img, (x, y), (x + w, y + h), color, 2)
         cv2.putText(detected_img, f'{label}: {confidence}', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
+    #Cập nhật số lượng đối tượng phát hiện
     object_count = len(indexes.flatten())
 
     # Cập nhật hình ảnh đã phát hiện
